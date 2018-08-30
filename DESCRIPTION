@@ -1,0 +1,11 @@
+Package: ACAT
+Title: What the Package Does (one line, title case)
+Version: 0.0.0.9000
+Authors@R: person("Yaowu", "Liu", email = "yaowuliu@hsph.harvard.edu", role = c("aut", "cre"))
+Description: This package implemented the Aggregaged Cauchy Associaion Test (ACAT).
+Depends: R (>= 3.4.4)
+Imports: Matrix
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.0

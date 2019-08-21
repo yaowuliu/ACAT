@@ -262,7 +262,7 @@ Burden<-function(G,obj,kernel="linear.weighted",weights.beta=c(1,25),weights=NUL
             }else{
                 X.med<-obj[["X.med"]]
                 Y.res<-obj[["Y.res"]]/sqrt(obj[["sigma2"]])  ## rescaled residules
-                n<-length(Y)
+                n<-length(Y.res)
             }
         }else if (out_type=="D"){
             if (!all.equal(names(obj)[2:length(obj)],c("X.tilde","Y.res","sigma2.Y"))){

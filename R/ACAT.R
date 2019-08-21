@@ -210,7 +210,7 @@ Get.marginal.pval<-function(G,obj){
             }else{
                 X.med<-obj[["X.med"]]
                 Y.res<-obj[["Y.res"]]
-                n<-length(Y)
+                n<-length(Y.res)
                 SST<-obj[["sigma2"]]*(n-ncol(X.med))
             }
         }else if (out_type=="D"){

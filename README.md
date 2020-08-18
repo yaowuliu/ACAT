@@ -6,4 +6,4 @@ library(devtools)
 devtools::install_github("yaowuliu/ACAT")
 ```
 ## Usage
-Please see the [ACAT user manual](https://github.com/yaowuliu/ACAT/blob/master/docs/ACAT_0.9.pdf).
+Please see the [ACAT user manual](https://github.com/yaowuliu/ACAT/blob/master/doc/ACAT_manual.pdf).

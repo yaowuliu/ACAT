@@ -4,32 +4,44 @@
 \alias{ACAT_V}
 \title{A set-based test that uses ACAT to combine the variant-level p-values.}
 \usage{
-ACAT_V(G, obj, weights.beta = c(1, 25), weights = NULL,
-  mac.thresh = 10)
+ACAT_V(G, obj, weights.beta = c(1, 25), weights = NULL, mac.thresh = 10)
 }
 \arguments{
 \item{G}{a numeric matrix or dgCMatrix with each row as a different individual and each column as a separate gene/snp. Each genotype should be coded as 0, 1, 2.}
 
-\item{obj}{an output object of the NULL_Model function.}
+\item{obj}{an output object of the \code{\link{NULL_Model}} function.}
 
 \item{weights.beta}{a numeric vector of parameters for the beta weights for the weighted kernels. If you want to use your own weights, please use the “weights” parameter. It will be ignored if “weights” parameter is not null.}
 
-\item{weights}{a numeric vector of weights for the SNPs. When it is NULL, the beta weight with the “weights.beta” parameter is used.}
+\item{weights}{a numeric vector of weights for the SNP p-values. When it is NULL, the beta weight with the “weights.beta” parameter is used.}
 
 \item{mac.thresh}{a threshold of the minor allele count (MAC). The Burden test will be used to aggregate the SNPs with MAC less than this thrshold.}
 }
 \value{
-p-value of ACAT-V.
+The p-value of ACAT-V.
 }
 \description{
 A set-based test that uses ACAT to combine the variant-level p-values.
 }
+\details{
+The Burden test is first used to aggregate very rare variants with Minor Allele Count (MAC) < \emph{mac.thresh} (e.g., 10), and a Burden p-value is obtained. For each of the variants with MAC >= \emph{mac.thresh}, a variant-level p-value is calculated. Then, ACAT is used to combine the variant-level p-values and the Burden test p-value of very rare variants.
+
+If \emph{weights.beta} is used, then the weight for the Burden test p-value is demetermined by the average Minor Allele Frequency (MAF) of the variants with MAC < \emph{mac.thresh}; if the user-specified \emph{weights} is used, then the weight for the Burden test p-value is the average of \emph{weights} of the variants with MAC < \emph{mac.thresh}.
+
+Note that the \emph{weights} here are for the SNP p-vlaues. In SKAT, the weights are for the SNP score test statistics. To transfrom the SKAT weights to the \emph{weights} here, one can use the formula that \emph{weights} = (skat_weights)^2*MAF*(1-MAF).
+}
 \examples{
  data(Geno)
  G<-Geno[,1:100] # Geno is a dgCMatrix of genotypes
- Y<-rnorm(nrow(G)); X<-matrix(rnorm(nrow(G)*4),ncol=4)
- obj<-NULL_Model(Y,X)
+ Y<-rnorm(nrow(G)); Z<-matrix(rnorm(nrow(G)*4),ncol=4)
+ obj<-NULL_Model(Y,Z)
  ACAT_V(G,obj)
+}
+\references{
+Liu, Y., et al. (2019). ACAT: A fast and powerful p value combination
+method for rare-variant analysis in sequencing studies.
+\emph{American Journal of Humann Genetics 104}(3), 410-421.
+(\href{https://www.sciencedirect.com/science/article/pii/S0002929719300023}{pub})
 }
 \author{
 Yaowu Liu

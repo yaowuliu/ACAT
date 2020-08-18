@@ -4,23 +4,26 @@
 \alias{NULL_Model}
 \title{Get parameters and residuals from the NULL model}
 \usage{
-NULL_Model(Y, X = NULL)
+NULL_Model(Y, Z = NULL)
 }
 \arguments{
 \item{Y}{a numeric vector of outcome phenotypes.}
 
-\item{X}{a numeric matrix of covariates. X must be full-rank.}
+\item{Z}{a numeric matrix of covariates. Z must be full-rank. Do not include intercept in Z. The intercept will be added automatically.}
 }
 \value{
-This function returns an object that has model parameters and residuals of the NULL model of no association between genetic variables and outcome phenotypes. After obtaining it, please use ACAT-V function to conduct the association test.
+This function returns an object that has model parameters and residuals of the NULL model of no association between genetic variables and outcome phenotypes. After obtaining it, please use \code{\link{ACAT_V}} function to conduct the association test.
 }
 \description{
 Compute model parameters and residuals for ACAT-V
 }
+\details{
+\emph{Y} could only be continuous or binary. If \emph{Y} is continuous, a linear regression model is fitted. If \emph{Y} is binary, it must be coded as 0,1 and a logistic model is fitted.
+}
 \examples{
  Y<-rnorm(10000)
- X<-matrix(rnorm(10000*4),ncol=4)
- obj<-NULL_Model(Y,X)
+ Z<-matrix(rnorm(10000*4),ncol=4)
+ obj<-NULL_Model(Y,Z)
 }
 \author{
 Yaowu Liu

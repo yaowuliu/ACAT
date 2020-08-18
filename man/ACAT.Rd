@@ -4,22 +4,28 @@
 \alias{ACAT}
 \title{Aggregated Cauchy Assocaition Test}
 \usage{
-ACAT(Pvals, Weights = NULL)
+ACAT(Pvals, weights = NULL, is.check = TRUE)
 }
 \arguments{
-\item{Pvals}{a numeric vector of p-values to be combined by ACAT.}
+\item{Pvals}{a numeric vector/matrix of p-values. When it is a matrix, each column of p-values is combined by ACAT.}
 
-\item{Weights}{a numeric vector of non-negative weights for the combined p-values. When it is NULL, the equal weights are used.}
+\item{weights}{a numeric vector/matrix of non-negative weights for the combined p-values. When it is NULL, the equal weights are used.}
+
+\item{is.check}{logical. Should the validity of \emph{Pvals} (and \emph{weights}) be checked? When the size of \emph{Pvals} is large and one knows \emph{Pvals} is valid, then the checking part can be skipped to save memory.}
 }
 \value{
-p-value of ACAT.
+The p-value(s) of ACAT.
 }
 \description{
 A p-value combination method using the Cauchy distribution.
 }
 \examples{
-p.values<-c(2e-02,4e-04,0.2,0.1,0.8)
-ACAT(Pvals=p.values)
+p.values<-c(2e-02,4e-04,0.2,0.1,0.8);ACAT(Pvals=p.values)
+ACAT(matrix(runif(1000),ncol=10))
+}
+\references{
+Liu, Y., & Xie, J. (2019). Cauchy combination test: a powerful test with analytic p-value calculation
+under arbitrary dependency structures. \emph{Journal of American Statistical Association},115(529), 393-402. (\href{https://amstat.tandfonline.com/doi/abs/10.1080/01621459.2018.1554485}{pub})
 }
 \author{
 Yaowu Liu

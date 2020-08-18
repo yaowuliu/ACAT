@@ -6,62 +6,77 @@
 #'
 #'
 #'
-#' @param Weights a numeric vector of non-negative weights for the combined p-values. When it is NULL, the equal weights are used.
-#' @param Pvals a numeric vector of p-values to be combined by ACAT.
-#' @return p-value of ACAT.
+#' @param weights a numeric vector/matrix of non-negative weights for the combined p-values. When it is NULL, the equal weights are used.
+#' @param Pvals a numeric vector/matrix of p-values. When it is a matrix, each column of p-values is combined by ACAT.
+#' @param is.check logical. Should the validity of \emph{Pvals} (and \emph{weights}) be checked? When the size of \emph{Pvals} is large and one knows \emph{Pvals} is valid, then the checking part can be skipped to save memory.
+#' @return The p-value(s) of ACAT.
 #' @author Yaowu Liu
-#' @examples p.values<-c(2e-02,4e-04,0.2,0.1,0.8)
-#' @examples ACAT(Pvals=p.values)
+#' @examples p.values<-c(2e-02,4e-04,0.2,0.1,0.8);ACAT(Pvals=p.values)
+#' @examples ACAT(matrix(runif(1000),ncol=10))
+#' @references Liu, Y., & Xie, J. (2019). Cauchy combination test: a powerful test with analytic p-value calculation
+#' under arbitrary dependency structures. \emph{Journal of American Statistical Association},115(529), 393-402. (\href{https://amstat.tandfonline.com/doi/abs/10.1080/01621459.2018.1554485}{pub})
 #' @export
-ACAT<-function(Pvals,Weights=NULL){
-    #### check if there is NA
-    if (sum(is.na(Pvals))>0){
-        stop("Cannot have NAs in the p-values!")
+ACAT<-function(Pvals,weights=NULL,is.check=TRUE){
+    if (is.check){
+        #### check if there is NA
+        if (sum(is.na(Pvals))>0){
+            stop("Cannot have NAs in the p-values!")
+        }
+        #### check if Pvals are between 0 and 1
+        if ((sum(Pvals<0)+sum(Pvals>1))>0){
+            stop("P-values must be between 0 and 1!")
+        }
+        #### check if there are pvals that are either exactly 0 or 1.
+        is.zero<-(sum(Pvals==0)>=1)
+        is.one<-(sum(Pvals==1)>=1)
+        if (is.zero && is.one){
+            stop("Cannot have both 0 and 1 p-values!")
+        }
+        if (is.zero){
+            return(0)
+        }
+        if (is.one){
+            warning("There are p-values that are exactly 1!")
+            return(1)
+        }
     }
-    #### check if Pvals are between 0 and 1
-    if ((sum(Pvals<0)+sum(Pvals>1))>0){
-        stop("P-values must be between 0 and 1!")
-    }
-    #### check if there are pvals that are either exactly 0 or 1.
-    is.zero<-(sum(Pvals==0)>=1)
-    is.one<-(sum(Pvals==1)>=1)
-    if (is.zero && is.one){
-        stop("Cannot have both 0 and 1 p-values!")
-    }
-    if (is.zero){
-        return(0)
-    }
-    if (is.one){
-        warning("There are p-values that are exactly 1!")
-        return(1)
-    }
-
+    Pvals<-as.matrix(Pvals)
     #### Default: equal weights. If not, check the validity of the user supplied weights and standadize them.
-    if (is.null(Weights)){
-        Weights<-rep(1/length(Pvals),length(Pvals))
-    }else if (length(Weights)!=length(Pvals)){
-        stop("The length of weights should be the same as that of the p-values")
-    }else if (sum(Weights<0)>0){
-        stop("All the weights must be positive!")
+    if (is.null(weights)){
+        is.weights.null<-TRUE
     }else{
-        Weights<-Weights/sum(Weights)
+        is.weights.null<-FALSE
+        weights<-as.matrix(weights)
+        if (sum(dim(weights)!=dim(Pvals))>0){
+            stop("The dimensions of weights and Pvals must be the same!")
+        }else if (is.check & (sum(weights<0)>0)){
+            stop("All the weights must be nonnegative!")
+        }else{
+            w.sum<-colSums(weights)
+            if (sum(w.sum<=0)>0){
+                stop("At least one weight should be positive in each column!")
+            }else{
+                for (j in 1:ncol(weights)){
+                    weights[,j]<-weights[,j]/w.sum[j]
+                }
+            }
+        }
+
     }
 
-
-    #### check if there are very small non-zero p values
-    is.small<-(Pvals<1e-16)
-    if (sum(is.small)==0){
-        cct.stat<-sum(Weights*tan((0.5-Pvals)*pi))
+    #### check if there are very small non-zero p values and calcuate the cauchy statistics
+    is.small<-(Pvals<1e-15)
+    if (is.weights.null){
+         Pvals[!is.small]<-tan((0.5-Pvals[!is.small])*pi)
+         Pvals[is.small]<-1/Pvals[is.small]/pi
+         cct.stat<-colMeans(Pvals)
     }else{
-        cct.stat<-sum((Weights[is.small]/Pvals[is.small])/pi)
-        cct.stat<-cct.stat+sum(Weights[!is.small]*tan((0.5-Pvals[!is.small])*pi))
+         Pvals[!is.small]<-weights[!is.small]*tan((0.5-Pvals[!is.small])*pi)
+         Pvals[is.small]<-(weights[is.small]/Pvals[is.small])/pi
+         cct.stat<-colSums(Pvals)
     }
-    #### check if the test statistic is very large.
-    if (cct.stat>1e+15){
-        pval<-(1/cct.stat)/pi
-    }else{
-        pval<-1-pcauchy(cct.stat)
-    }
+    #### return the ACAT p value(s).
+    pval<-pcauchy(cct.stat,lower.tail = F)
     return(pval)
 }
 
@@ -70,16 +85,26 @@ ACAT<-function(Pvals,Weights=NULL){
 #'
 #'
 #' @param G a numeric matrix or dgCMatrix with each row as a different individual and each column as a separate gene/snp. Each genotype should be coded as 0, 1, 2.
-#' @param obj an output object of the NULL_Model function.
+#' @param obj an output object of the \code{\link{NULL_Model}} function.
 #' @param weights.beta a numeric vector of parameters for the beta weights for the weighted kernels. If you want to use your own weights, please use the “weights” parameter. It will be ignored if “weights” parameter is not null.
-#' @param weights a numeric vector of weights for the SNPs. When it is NULL, the beta weight with the “weights.beta” parameter is used.
+#' @param weights a numeric vector of weights for the SNP p-values. When it is NULL, the beta weight with the “weights.beta” parameter is used.
 #' @param mac.thresh a threshold of the minor allele count (MAC). The Burden test will be used to aggregate the SNPs with MAC less than this thrshold.
-#' @return p-value of ACAT-V.
+#' @return The p-value of ACAT-V.
+#' @details The Burden test is first used to aggregate very rare variants with Minor Allele Count (MAC) < \emph{mac.thresh} (e.g., 10), and a Burden p-value is obtained. For each of the variants with MAC >= \emph{mac.thresh}, a variant-level p-value is calculated. Then, ACAT is used to combine the variant-level p-values and the Burden test p-value of very rare variants.
+#'
+#' If \emph{weights.beta} is used, then the weight for the Burden test p-value is demetermined by the average Minor Allele Frequency (MAF) of the variants with MAC < \emph{mac.thresh}; if the user-specified \emph{weights} is used, then the weight for the Burden test p-value is the average of \emph{weights} of the variants with MAC < \emph{mac.thresh}.
+#'
+#' Note that the \emph{weights} here are for the SNP p-vlaues. In SKAT, the weights are for the SNP score test statistics. To transfrom the SKAT weights to the \emph{weights} here, one can use the formula that \emph{weights} = (skat_weights)^2*MAF*(1-MAF).
+#'
 #' @author Yaowu Liu
+#' @references Liu, Y., et al. (2019). ACAT: A fast and powerful p value combination
+#' method for rare-variant analysis in sequencing studies.
+#' \emph{American Journal of Humann Genetics 104}(3), 410-421.
+#' (\href{https://www.sciencedirect.com/science/article/pii/S0002929719300023}{pub})
 #' @examples  data(Geno)
 #' @examples  G<-Geno[,1:100] # Geno is a dgCMatrix of genotypes
-#' @examples  Y<-rnorm(nrow(G)); X<-matrix(rnorm(nrow(G)*4),ncol=4)
-#' @examples  obj<-NULL_Model(Y,X)
+#' @examples  Y<-rnorm(nrow(G)); Z<-matrix(rnorm(nrow(G)*4),ncol=4)
+#' @examples  obj<-NULL_Model(Y,Z)
 #' @examples  ACAT_V(G,obj)
 #' @export
 ACAT_V<-function(G,obj,weights.beta=c(1,25),weights=NULL,mac.thresh=10){
@@ -108,7 +133,7 @@ ACAT_V<-function(G,obj,weights.beta=c(1,25),weights=NULL,mac.thresh=10){
     }else if (sum(mac<=mac.thresh)==0){ ## only cauchy method
         if (is.null(weights)){
             MAF<-mac/(2*n)
-            W<-dbeta(MAF,weights.beta[1],weights.beta[2])/dbeta(MAF,0.5,0.5)
+            W<-(dbeta(MAF,weights.beta[1],weights.beta[2])/dbeta(MAF,0.5,0.5))^2
         }else{
             W<-weights
         }
@@ -148,14 +173,15 @@ ACAT_V<-function(G,obj,weights.beta=c(1,25),weights=NULL,mac.thresh=10){
 #'
 #'
 #' @param Y a numeric vector of outcome phenotypes.
-#' @param X a numeric matrix of covariates. X must be full-rank.
-#' @return This function returns an object that has model parameters and residuals of the NULL model of no association between genetic variables and outcome phenotypes. After obtaining it, please use ACAT-V function to conduct the association test.
+#' @param Z a numeric matrix of covariates. Z must be full-rank. Do not include intercept in Z. The intercept will be added automatically.
+#' @return This function returns an object that has model parameters and residuals of the NULL model of no association between genetic variables and outcome phenotypes. After obtaining it, please use \code{\link{ACAT_V}} function to conduct the association test.
+#' @details \emph{Y} could only be continuous or binary. If \emph{Y} is continuous, a linear regression model is fitted. If \emph{Y} is binary, it must be coded as 0,1 and a logistic model is fitted.
 #' @author Yaowu Liu
 #' @examples  Y<-rnorm(10000)
-#' @examples  X<-matrix(rnorm(10000*4),ncol=4)
-#' @examples  obj<-NULL_Model(Y,X)
+#' @examples  Z<-matrix(rnorm(10000*4),ncol=4)
+#' @examples  obj<-NULL_Model(Y,Z)
 #' @export
-NULL_Model<-function(Y,X=NULL){
+NULL_Model<-function(Y,Z=NULL){
     n<-length(Y)
     #### check the type of Y
     if ((sum(Y==0)+sum(Y==1))==n){
@@ -164,22 +190,21 @@ NULL_Model<-function(Y,X=NULL){
         out_type<-"C"
     }
     #### Add intercept
-    X.tilde<-cbind(rep(1,length(Y)),X)
-    #colnames(X.tilde)[1]<-"Intercept"
+    Z.tilde<-cbind(rep(1,length(Y)),Z)
     if (out_type=="C"){
         #### estimate of sigma square
-        X.med<-X.tilde%*%solve(chol(t(X.tilde)%*%X.tilde))   ## X.med%*%t(X.med) is the projection matrix of X.tilde
-        Y.res<-as.vector(Y-(Y%*%X.med)%*%t(X.med))
-        sigma2<-sum(Y.res^2)/(n-ncol(X.med))
+        Z.med<-Z.tilde%*%solve(chol(t(Z.tilde)%*%Z.tilde))   ## Z.med%*%t(Z.med) is the projection matrix of Z.tilde
+        Y.res<-as.vector(Y-(Y%*%Z.med)%*%t(Z.med))
+        sigma2<-sum(Y.res^2)/(n-ncol(Z.med))
         #### output
         res<-list()
         res[["out_type"]]<-out_type
-        res[["X.med"]]<-X.med
+        res[["Z.med"]]<-Z.med
         res[["Y.res"]]<-Y.res
         res[["sigma2"]]<-sigma2
     }else if (out_type=="D"){
         #### fit null model
-        g<-glm(Y~0+X.tilde,family = "binomial")
+        g<-glm(Y~0+Z.tilde,family = "binomial")
         prob.est<-g[["fitted.values"]]
         #### unstandarized residuals
         Y.res<-(Y-prob.est)
@@ -188,7 +213,7 @@ NULL_Model<-function(Y,X=NULL){
         ### output
         res<-list()
         res[["out_type"]]<-out_type
-        res[["X.tilde"]]<-X.tilde
+        res[["Z.tilde"]]<-Z.tilde
         res[["Y.res"]]<-Y.res
         res[["sigma2.Y"]]<-sigma2.Y
     }
@@ -205,19 +230,19 @@ Get.marginal.pval<-function(G,obj){
     }else{
         out_type<-obj[["out_type"]]
         if (out_type=="C"){
-            if (!all.equal(names(obj)[2:length(obj)],c("X.med","Y.res","sigma2"))){
+            if (!all.equal(names(obj)[2:length(obj)],c("Z.med","Y.res","sigma2"))){
                 stop("obj is not calculated from MOAT_NULL_MODEL!")
             }else{
-                X.med<-obj[["X.med"]]
+                Z.med<-obj[["Z.med"]]
                 Y.res<-obj[["Y.res"]]
                 n<-length(Y)
-                SST<-obj[["sigma2"]]*(n-ncol(X.med))
+                SST<-obj[["sigma2"]]*(n-ncol(Z.med))
             }
         }else if (out_type=="D"){
-            if (!all.equal(names(obj)[2:length(obj)],c("X.tilde","Y.res","sigma2.Y"))){
+            if (!all.equal(names(obj)[2:length(obj)],c("Z.tilde","Y.res","sigma2.Y"))){
                 stop("obj is not calculated from MOAT_NULL_MODEL!")
             }else{
-                X.tilde<-obj[["X.tilde"]]
+                Z.tilde<-obj[["Z.tilde"]]
                 Y.res<-obj[["Y.res"]]
                 sigma2.Y<-obj[["sigma2.Y"]]
                 n<-length(Y.res)
@@ -230,19 +255,19 @@ Get.marginal.pval<-function(G,obj){
     }
 
     if (out_type=="C"){
-        G_tX.med<-as.matrix(Matrix::crossprod(X.med,G))
+        G_tX.med<-as.matrix(Matrix::crossprod(Z.med,G))
         ### Sigma^2 of G
         Sigma2.G<-Matrix::colSums(G^2)-Matrix::colSums(G_tX.med^2)
         SSR<-as.vector((Y.res%*%G)^2/Sigma2.G)
         SSR[Sigma2.G<=0]<-0
-        df.2<-n-1-ncol(X.med)
+        df.2<-n-1-ncol(Z.med)
         t.stat<-suppressWarnings(sqrt(SSR/((SST-SSR)/df.2)))
-        marginal.pvals<-2*pt(t.stat,(n-1-ncol(X.med)),lower.tail = FALSE)
+        marginal.pvals<-2*pt(t.stat,(n-1-ncol(Z.med)),lower.tail = FALSE)
     }else if (out_type=="D"){
         Z.stat0<-as.vector(Y.res%*%G)
         ### Sigma when rho=0
-        tG_X.tilde_sigma2<-as.matrix(Matrix::crossprod(G,X.tilde*sigma2.Y))
-        Sigma2.G<-Matrix::colSums(G^2*sigma2.Y)-diag(tG_X.tilde_sigma2%*%solve(t(X.tilde)%*%(X.tilde*sigma2.Y))%*%t(tG_X.tilde_sigma2))
+        tG_X.tilde_sigma2<-as.matrix(Matrix::crossprod(G,Z.tilde*sigma2.Y))
+        Sigma2.G<-Matrix::colSums(G^2*sigma2.Y)-diag(tG_X.tilde_sigma2%*%solve(t(Z.tilde)%*%(Z.tilde*sigma2.Y))%*%t(tG_X.tilde_sigma2))
         marginal.pvals<-2*pnorm(abs(Z.stat0)/sqrt(Sigma2.G),lower.tail = FALSE)
     }
 
@@ -257,18 +282,18 @@ Burden<-function(G,obj,kernel="linear.weighted",weights.beta=c(1,25),weights=NUL
     }else{
         out_type<-obj[["out_type"]]
         if (out_type=="C"){
-            if (!all.equal(names(obj)[2:length(obj)],c("X.med","Y.res","sigma2"))){
+            if (!all.equal(names(obj)[2:length(obj)],c("Z.med","Y.res","sigma2"))){
                 stop("obj is not calculated from NULL_MODEL!")
             }else{
-                X.med<-obj[["X.med"]]
+                Z.med<-obj[["Z.med"]]
                 Y.res<-obj[["Y.res"]]/sqrt(obj[["sigma2"]])  ## rescaled residules
                 n<-length(Y)
             }
         }else if (out_type=="D"){
-            if (!all.equal(names(obj)[2:length(obj)],c("X.tilde","Y.res","sigma2.Y"))){
+            if (!all.equal(names(obj)[2:length(obj)],c("Z.tilde","Y.res","sigma2.Y"))){
                 stop("obj is not calculated from NULL_MODEL!")
             }else{
-                X.tilde<-obj[["X.tilde"]]
+                Z.tilde<-obj[["Z.tilde"]]
                 Y.res<-obj[["Y.res"]]
                 sigma2.Y<-obj[["sigma2.Y"]]
                 n<-length(Y.res)
@@ -301,11 +326,11 @@ Burden<-function(G,obj,kernel="linear.weighted",weights.beta=c(1,25),weights=NUL
         if (out_type=="C"){
             Z.stat.sum<-as.vector((Y.res%*%G)%*%W)
             Gw<-G%*%W
-            sigma.z<-sqrt(sum(Gw^2)-sum((t(X.med)%*%(Gw))^2))
+            sigma.z<-sqrt(sum(Gw^2)-sum((t(Z.med)%*%(Gw))^2))
         }else if (out_type=="D"){
             Z.stat.sum<-as.vector((Y.res%*%G)%*%W)
             Gw<-as.vector(G%*%W)
-            sigma.z<-sum(Gw^2*sigma2.Y)-((Gw*sigma2.Y)%*%X.tilde)%*%solve(t(X.tilde)%*%(X.tilde*sigma2.Y))%*%t((Gw*sigma2.Y)%*%X.tilde)
+            sigma.z<-sum(Gw^2*sigma2.Y)-((Gw*sigma2.Y)%*%Z.tilde)%*%solve(t(Z.tilde)%*%(Z.tilde*sigma2.Y))%*%t((Gw*sigma2.Y)%*%Z.tilde)
             sigma.z<-as.vector(sqrt(sigma.z))
         }
     }else{

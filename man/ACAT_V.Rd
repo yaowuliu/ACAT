@@ -31,6 +31,7 @@ If \emph{weights.beta} is used, then the weight for the Burden test p-value is d
 Note that the \emph{weights} here are for the SNP p-vlaues. In SKAT, the weights are for the SNP score test statistics. To transfrom the SKAT weights to the \emph{weights} here, one can use the formula that \emph{weights} = (skat_weights)^2*MAF*(1-MAF).
 }
 \examples{
+ library(Matrix)
  data(Geno)
  G<-Geno[,1:100] # Geno is a dgCMatrix of genotypes
  Y<-rnorm(nrow(G)); Z<-matrix(rnorm(nrow(G)*4),ncol=4)

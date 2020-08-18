@@ -1,7 +1,7 @@
 Package: ACAT
 Title: Aggregaged Cauchy Associaion Test (ACAT)
-Version: 0.9
-Date: 2020-08-12
+Version: 0.91
+Date: 2020-08-18
 Authors@R: person("Yaowu", "Liu", email = "yaowuliu615@gmail.com", role = c("aut", "cre"))
 Maintainer: Yaowu Liu <yaowuliu615@gmail.com>
 Description: This package implemented ACAT, a generic method for combing p-values, and ACAT-V, a variant set test for rare variant analysis using ACAT.

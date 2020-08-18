@@ -101,6 +101,7 @@ ACAT<-function(Pvals,weights=NULL,is.check=TRUE){
 #' method for rare-variant analysis in sequencing studies.
 #' \emph{American Journal of Humann Genetics 104}(3), 410-421.
 #' (\href{https://www.sciencedirect.com/science/article/pii/S0002929719300023}{pub})
+#' @examples  library(Matrix)
 #' @examples  data(Geno)
 #' @examples  G<-Geno[,1:100] # Geno is a dgCMatrix of genotypes
 #' @examples  Y<-rnorm(nrow(G)); Z<-matrix(rnorm(nrow(G)*4),ncol=4)
@@ -236,7 +237,7 @@ Get.marginal.pval<-function(G,obj){
                 Z.med<-obj[["Z.med"]]
                 Y.res<-obj[["Y.res"]]
                 n<-length(Y.res)
-                SST<-obj[["sigma2"]]*(n-ncol(X.med))
+                SST<-obj[["sigma2"]]*(n-ncol(Z.med))
             }
         }else if (out_type=="D"){
             if (!all.equal(names(obj)[2:length(obj)],c("Z.tilde","Y.res","sigma2.Y"))){

@@ -17,6 +17,7 @@
 #' under arbitrary dependency structures. \emph{Journal of American Statistical Association},115(529), 393-402. (\href{https://amstat.tandfonline.com/doi/abs/10.1080/01621459.2018.1554485}{pub})
 #' @export
 ACAT<-function(Pvals,weights=NULL,is.check=TRUE){
+    Pvals<-as.matrix(Pvals)
     if (is.check){
         #### check if there is NA
         if (sum(is.na(Pvals))>0){
@@ -27,20 +28,20 @@ ACAT<-function(Pvals,weights=NULL,is.check=TRUE){
             stop("P-values must be between 0 and 1!")
         }
         #### check if there are pvals that are either exactly 0 or 1.
-        is.zero<-(sum(Pvals==0)>=1)
-        is.one<-(sum(Pvals==1)>=1)
-        if (is.zero && is.one){
-            stop("Cannot have both 0 and 1 p-values!")
+        is.zero<-(colSums(Pvals==0)>=1)
+        is.one<-(colSums(Pvals==1)>=1)
+        if (sum((is.zero+is.one)==2)>0){
+            stop("Cannot have both 0 and 1 p-values in the same column!")
         }
-        if (is.zero){
-            return(0)
+
+        if (sum(is.zero)>0){
+            warning("There are p-values that are exactly 0!")
         }
-        if (is.one){
+        if (sum(is.one)>0){
             warning("There are p-values that are exactly 1!")
-            return(1)
         }
+
     }
-    Pvals<-as.matrix(Pvals)
     #### Default: equal weights. If not, check the validity of the user supplied weights and standadize them.
     if (is.null(weights)){
         is.weights.null<-TRUE
